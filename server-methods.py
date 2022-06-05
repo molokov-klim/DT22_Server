@@ -1,7 +1,11 @@
 import socket
+import threading
+
+
 
 session_list = {}  # лист сессий
 connection_list = {}  # лист с подключениями
+
 data = ''  # сообщение от клиента
 method = ''  # первая часть сообщения - метод
 token = ''  # вторая часть сообщения - токен
@@ -23,6 +27,7 @@ def server_start():
             client_socket, address = server_socket.accept()  # принять подключение, пока его нет код дальше не идет
             print(f"Connection from {address} has been established")
             data = client_socket.recv(1024).decode('utf-8')  # принять 1024 байта
+            print("From client receive data: "+data)
             try:
                 method = data.split()[0]
             except:
