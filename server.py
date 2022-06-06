@@ -3,7 +3,8 @@ import threading
 
 HEADER = 1024  # Длина сообщения в байтах
 PORT = 9700  # Порт сервера
-SERVER = '188.127.239.39'  # socket.gethostbyname(socket.gethostname()) # IP адрес сервера
+#SERVER = '127.0.0.1'
+SERVER =  socket.gethostbyname(socket.gethostname()) # IP адрес сервера
 SERVER_ADDRESS = (SERVER, PORT)  # Адрес сервера в виде tuple IP, порт
 FORMAT = 'utf-8'  # формат преобразования текста по умолчанию
 SHUTDOWN_MESSAGE = '0P9o8I7u6Y5t'  # сообщение для удаленного выключения сервера
@@ -11,18 +12,18 @@ SHUTDOWN_MESSAGE = '0P9o8I7u6Y5t'  # сообщение для удаленно�
 SESSION_LIST = {}  # лист открытых сессий
 CONNECTION_LIST = {}  # лист с открытыми подключениями
 
-# DATA = '0'  # сообщение от клиента
-# METHOD = '0'  # первая часть сообщения - метод
-# TOKEN = '0'  # вторая часть сообщения - токен
-# IP = '0'  # третья часть сообщения - IP
+data = '0'  # сообщение от клиента
+method = '0'  # первая часть сообщения - метод
+token = '0'  # вторая часть сообщения - токен
+ip = '0'  # третья часть сообщения - IP
 # DIRECTION = '0'  # четвертая часть сообщения - направление
 
 try:
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # overcome the "Address already in use"
     server.bind(SERVER_ADDRESS)
     server.listen(500)  # подключений одновременно
 except KeyboardInterrupt:
-    server.close()
     print('shutdown')
     exit()
 
@@ -58,13 +59,11 @@ def handle_client(client_socket, client_address):
 
         if method == "startSession":
             start_session(token, client_socket, client_address)
-            client_socket.send(bytes("startSessionOK", "utf-8"))
 
         elif method == "stopSession":
-            stop_session(token)
+            stop_session(token, client_socket)
             client_socket.send(bytes("stopSessionOK", "utf-8"))
-            client_socket.shutdown(socket.SHUT_WR)
-            client_socket.close()
+
 
         elif method == "connectSession":
             connect_session(token, client_socket, client_address)
@@ -81,16 +80,14 @@ def handle_client(client_socket, client_address):
             client_socket.send(bytes("rotateOK", "utf-8"))
 
         elif method == SHUTDOWN_MESSAGE:
+            server.shutdown(socket.SHUT_WR)
             server.close()
             exit()
 
         else:
-            print(client_socket, client_address, data)
+            client_socket.send(bytes("unknown", "utf-8"))
 
         client_socket.send(f"Message {data} received by server".encode(FORMAT))
-
-        if method != "startSession":
-            client_socket.close()
 
 
         data = ''
@@ -109,37 +106,49 @@ def check_in_dict(key, dictionary):
         return False
 
 
-def start_session(token, client_socket, client_address):
+def start_session(arg_token, arg_client_socket, arg_client_address):
     print("start session")
-    SESSION_LIST[token] = [client_socket, client_address]
-    print('SESSION_LIST: ' + SESSION_LIST)
+    SESSION_LIST[arg_token] = [arg_client_socket, arg_client_address]
+    arg_client_socket.send(bytes("startSessionOK", "utf-8"))
+    print('SESSION_LIST: ')
+    print(SESSION_LIST)
 
 
-def stop_session(token):
+def stop_session(arg_token, arg_client_socket):
     print("stop session")
-    if check_in_dict(token, SESSION_LIST):
-        SESSION_LIST.pop(token, 'bebeka')
-    print('SESSION_LIST: ' + SESSION_LIST)
+    if check_in_dict(arg_token, SESSION_LIST):
+        SESSION_LIST.pop(arg_token, 'bebeka')
+    print('SESSION_LIST: ')
+    print(SESSION_LIST)
+    arg_client_socket.shutdown(socket.SHUT_WR)
+    arg_client_socket.close()
 
 
-def connect_session(token, client_socket, client_address):
+def connect_session(arg_token, arg_client_socket, arg_client_address):
     print("connect session")
-    if check_in_dict(token, SESSION_LIST):
-        CONNECTION_LIST[token] = [client_socket, client_address]
-    print('CONNECTION_LIST: ' + CONNECTION_LIST)
+    if check_in_dict(arg_token, SESSION_LIST):
+        CONNECTION_LIST[arg_token] = [arg_client_socket, arg_client_address]
+    print('CONNECTION_LIST: ')
+    print(CONNECTION_LIST)
+    send_to(SESSION_LIST[arg_token][0], f"MESSAGE Client {arg_client_socket}:{arg_client_address} connected")
 
 
-def disconnect_session(token):
+def disconnect_session(arg_token):
     print("disconnect session")
-    if check_in_dict(token, CONNECTION_LIST):
-        CONNECTION_LIST.pop(token, 'memeka')
-    print('CONNECTION_LIST: ' + CONNECTION_LIST)
+    if check_in_dict(arg_token, CONNECTION_LIST):
+        CONNECTION_LIST.pop(arg_token, 'memeka')
+    print('CONNECTION_LIST: ')
+    print(CONNECTION_LIST)
 
 
-def rotate(token, direction, client_socket, client_address):
+def rotate(arg_token, arg_direction, arg_client_socket, arg_client_address):
     print("rotate")
-    if check_in_dict(token, CONNECTION_LIST) == True:
+    if check_in_dict(arg_token, CONNECTION_LIST) == True:
         print("rotate")
+
+
+def send_to(arg_socket, arg_message):
+    arg_socket.send(bytes(arg_message, "utf-8"))
 
 
 if __name__ == '__main__':
