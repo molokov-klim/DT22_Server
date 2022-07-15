@@ -1,0 +1,33 @@
+# DT22_Server
+DT22_Server_part
+
+ssh USER@IP
+PASSWORD
+
+apt update -y
+
+apt upgrade -y
+
+apt dist-upgrade -y
+
+apt install wget build-essential libreadline-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev -y
+
+wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
+
+tar xvf Python-3.9.9.tgz
+
+cd Python-3.9.9/
+
+./configure --enable-optimizations
+
+make altinstall
+
+python3 --version
+
+python3.9 -m pip install <module>
+
+//EXAMPLE python3.9 -m pip install sphinx
+
+
+scp /home/hash/Desktop/Projects/Python/DT22_Server/server.py root@IP:/root/DT22
+PASSWORD
